@@ -7,6 +7,7 @@ import subprocess
 import time
 import os
 import signal
+import heapq
 
 def execute(job):
     try:
@@ -24,6 +25,7 @@ class JobScheduler:
         self.ipc_queue = ipc_queue
         self.jobs = {}  # job_id: job
         self.running_processes = {}  # job_id: Process
+        self.job_heap = []
 
     def run(self):
         print("Scheduler started. Waiting for jobs...\n")
@@ -34,12 +36,17 @@ class JobScheduler:
             time.sleep(0.5)
 
     def check_command_queue(self):
-        try:
-            msg = self.command_queue.get_nowait()
-            if isinstance(msg, IPCMessage) and msg.action == "submit":
-                self.start_job(msg.data)
-        except Empty:
-            pass
+        while not self.command_queue.empty():
+            try:
+                msg = self.command_queue.get_nowait()
+                if isinstance(msg, IPCMessage) and msg.action == "submit":
+                    heapq.heappush(self.job_heap, (msg.data.priority, msg.data))
+            except Empty:
+                pass
+
+        if self.job_heap:
+            priority, job = heapq.heappop(self.job_heap)
+            self.start_job(job)
 
     def check_ipc_queue(self):
         try:
