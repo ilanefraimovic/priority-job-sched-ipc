@@ -9,16 +9,6 @@ import os
 import signal
 import heapq
 
-def execute(job):
-    try:
-        process = subprocess.Popen(job.command, shell=True)
-        job.process = process
-        process.wait()
-        job.status = "Completed" if process.returncode == 0 else "Failed"
-    except Exception as e:
-        job.status = "Failed"
-        print(f"Error running job {job.id[:8]}: {e}")
-
 class JobScheduler:
     def __init__(self, command_queue, ipc_queue):
         self.command_queue = command_queue
@@ -26,9 +16,15 @@ class JobScheduler:
         self.jobs = {}  # job_id: job
         self.running_processes = {}  # job_id: Process
         self.job_heap = []
+        self.log_file = "shared_terminal.txt"
+
+        if not os.path.exists(self.log_file):
+            with open(self.log_file, 'w') as f:
+                f.write("")
 
     def run(self):
         print("Scheduler started. Waiting for jobs...\n")
+        subprocess.Popen(['start', 'cmd', '/K', 'tail', '-f', self.log_file], shell=True)
 
         while True:
             self.check_command_queue()
@@ -89,8 +85,15 @@ class JobScheduler:
         self.jobs[job.id] = job
         print(f"Starting Job: {job}")
 
+
+        def run_process_in_shared_terminal(command, log_file):
+            with open(log_file, "a") as log:
+                process = subprocess.Popen(command, stdout=log, stderr=log, shell=True)
+                process.communicate()
+                return process  
+
         try:
-            process = subprocess.Popen(job.command, shell=True)
+            process = run_process_in_shared_terminal(job.command, self.log_file)
             job.process = process
             self.running_processes[job.id] = process
 
