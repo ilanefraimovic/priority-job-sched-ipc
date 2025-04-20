@@ -66,8 +66,8 @@ if __name__ == "__main__":
     scheduler_process.start()
 
     load_jobs_from_file("jobs.txt", command_queue)
-
     #user_input(command_queue, ipc_queue)
     # time.sleep(3)
     ipc_queue.put(IPCMessage("status"))
+    #user_input(command_queue, ipc_queue)
     scheduler_process.join()
