@@ -6,6 +6,7 @@ from ipc import IPCMessage
 import subprocess
 import time
 import os
+from threading import Thread
 import signal
 import heapq
 
@@ -14,13 +15,13 @@ class JobScheduler:
         self.command_queue = command_queue
         self.ipc_queue = ipc_queue
         self.jobs = {}  # job_id: job
-        self.running_processes = {}  # job_id: Process
-        self.job_heap = []
+        self.running_processes = {}  # job_id: subprocess.Popen
+        self.pending_jobs = PriorityQueue()  # Priority queue based on Job.__lt__
         self.log_file = "shared_terminal.txt"
-
+        
         if not os.path.exists(self.log_file):
             with open(self.log_file, 'w') as f:
-                f.write("")
+                f.write("")        
 
     def run(self):
         print("Scheduler started. Waiting for jobs...\n")
@@ -29,20 +30,31 @@ class JobScheduler:
         while True:
             self.check_command_queue()
             self.check_ipc_queue()
+            if not self.pending_jobs.empty():
+                job = self.pending_jobs.get()
+                self.start_job(job)
+
+            # Exit if all jobs are done and no more are coming
+            all_done = all(job.status in ["Completed", "Failed", "Cancelled"] for job in self.jobs.values())
+            if self.pending_jobs.empty() and all_done and self.command_queue.empty():
+                print("✅ All jobs finished. Shutting down scheduler.")
+                break
+
             time.sleep(0.5)
 
     def check_command_queue(self):
-        while not self.command_queue.empty():
+      
+        while True:
             try:
                 msg = self.command_queue.get_nowait()
                 if isinstance(msg, IPCMessage) and msg.action == "submit":
-                    heapq.heappush(self.job_heap, (msg.data.priority, msg.data))
+                    job = msg.data
+                    job.status = "Queued"
+                    self.jobs[job.id] = job
+                    self.pending_jobs.put(job)
+                    print(f"Job Queued: {job}")
             except Empty:
-                pass
-
-        if self.job_heap:
-            priority, job = heapq.heappop(self.job_heap)
-            self.start_job(job)
+                break
 
     def check_ipc_queue(self):
         try:
@@ -56,8 +68,6 @@ class JobScheduler:
             elif msg.action == "cancel":
                 job_id = msg.data
                 matched_job_id = None
-
-                # Match partial ID (first 8 characters shown to users)
                 for jid in self.jobs:
                     if jid.startswith(job_id):
                         matched_job_id = jid
@@ -76,7 +86,6 @@ class JobScheduler:
             elif msg.action == "exit":
                     print("Shutting down scheduler...")
                     os._exit(0)   
-
         except Empty:
             pass
 
@@ -103,8 +112,7 @@ class JobScheduler:
                 if job.status != "Cancelled":
                     job.status = "Completed" if process.returncode == 0 else "Failed"
                     print(f"Finished: {job}")
-
-            from threading import Thread
+              
             Thread(target=wait_and_update, daemon=True).start()
 
         except Exception as e:
