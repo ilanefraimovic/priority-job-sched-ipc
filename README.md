@@ -57,3 +57,36 @@ execution. Each job is executed in a separate process, which is managed by the s
 
 
 This program was made to explore Job scheduling problems and solutions, as well as IPC in python.
+
+## 📦 Setup Instructions (macOS)
+
+### 1. Prerequisites
+- Python 3.8 or higher installed (`python3 --version`)
+- Terminal access (bash or zsh)
+- Create a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 2. Run the program
+- Make startup script executable 
+```
+chmod +x start1.sh 
+```
+- Run the scheduler
+```
+./start1.sh
+```
+This will:
+	•	Open two new Terminal tabs:
+	•	One to monitor shared_terminal.txt (job output)
+	•	One to monitor log.txt (scheduler log)
+	•	Launch the main Python interface in your current terminal
+
+### Fixing Script Path with start1.sh
+- Change this : ```bash
+PROJECT_DIR="$HOME/Desktop/OS-proj/OS-Proj"
+```
+
