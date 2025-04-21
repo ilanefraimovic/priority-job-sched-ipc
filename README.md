@@ -5,18 +5,23 @@ Priority-based job scheduler that efficiently manages multiple processes, handle
 • Job Submission:
 Users can submit jobs with a specified priority and command for execution. Jobs are
 queued and executed based on their priority.
+
 • Job Monitoring:
 Users can check the status of current jobs in the system, including running jobs and their
 respective priorities.
+
 • Job Cancellation:
 Users can cancel a running job by specifying its job ID, which terminates the process.
+
 • Job Scheduling:
 The system uses a priority queue to ensure jobs are executed based on their priority. The
 highest-priority job is executed first, ensuring optimal use of system resources.
+
 • Inter-Process Communication (IPC):
 The system uses multiprocessing.Queue to pass messages and manage jobs between the
 scheduler and user processes. This allows jobs to be submitted, queried, and cancelled in
 real-time.
+
 • Process Execution:
 The program uses worker processes to execute the job commands and track their
 execution. Each job is executed in a separate process, which is managed by the scheduler.
