@@ -86,7 +86,7 @@ This will:
 	•	Launch the main Python interface in your current terminal
 
 ### Fixing Script Path with start1.sh
-- Change this : ```bash
+- Change this : ```
 PROJECT_DIR="$HOME/Desktop/OS-proj/OS-Proj"
 ```
 
