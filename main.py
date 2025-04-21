@@ -3,12 +3,13 @@ from scheduler import JobScheduler
 from job import Job
 from ipc import IPCMessage
 import multiprocessing
-import os
 
+#Run the Scheduler
 def start_scheduler(command_queue, ipc_queue):
     scheduler = JobScheduler(command_queue, ipc_queue)
     scheduler.run()
 
+#Read input from text file 
 def load_jobs_from_file(file_path, command_queue):
     with open(file_path, "r") as file:
         for line in file:
@@ -25,7 +26,8 @@ def load_jobs_from_file(file_path, command_queue):
                 print(f"Skipped invalid line: {line.strip()} → {e}")
     print("Reading From File Complete.")
 
-def user_input(command_queue, ipc_queue):
+#Read input from keyboard
+def user_input(command_queue, ipc_queue, scheduler_process):
     while True:
         print("\n==== Job Scheduler Menu ====")
         print("0. Submit Jobs From Text File")
@@ -55,9 +57,10 @@ def user_input(command_queue, ipc_queue):
             break
         else:
             print("Invalid option")
+        if choice == "0" or choice == "1":
+            ipc_queue.put(IPCMessage("new jobs")) # sends signal to scheduler that new jobs are recieved, decreasing existing priorities and preventing starvation
 
-
-
+#Main function
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
 
@@ -68,7 +71,7 @@ if __name__ == "__main__":
     scheduler_process.start()
 
     #load_jobs_from_file("jobs.txt", command_queue)
-    user_input(command_queue, ipc_queue)
+    user_input(command_queue, ipc_queue, scheduler_process)
     # time.sleep(3)
     ipc_queue.put(IPCMessage("status"))
     #user_input(command_queue, ipc_queue)

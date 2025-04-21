@@ -10,8 +10,9 @@ class Job:
         self.resource_requirement = resource_requirement
         self.status = "Queued"
         self.process = None
-        self.timestamp = time.time()  # Used for FIFO tie-breaking
+        self.timestamp = time.time() 
 
+    # < operator overload: sets precedence for attributes of a job when it comes to prioritizing in PriorityQueue()
     def __lt__(self, other):
         # Custom sorting logic for the priority queue
         if self.priority != other.priority:
