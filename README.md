@@ -23,18 +23,31 @@ execution. Each job is executed in a separate process, which is managed by the s
 
 ## To Run The Program:
 • Make sure you are using Windows OS -  this project is catered towards Windows
+
 • Download python3 onto your machine
+
 • Clone this repository onto your local filesystem
+
 • Write a .txt file with many commands in the following format:
+
     command | priority | estimated_time (s) | resource_requirement
+
     ex:
+
     sleep 5 |   1      |          5         |        low
+
     or 
+
     sleep 5 | 1 | 5 | low
+
 • Other options: test with included test files jobs.txt and jobs2txt, or type in commands from keyboard at runtime
+
 • Run ./run.bat in your terminal within the priority-job-sched-ipc directory or click on the run executable
-**Note: make sure your input commands run on the platform for which you are running.. ex: bash shell in vscode: linux commands, clicking run executable: windows commands 
+
+**Note: make sure your input commands run on the platform for which you are running.. ex: bash shell in vscode: linux commands, clicking run executable: windows commands
+
 • Follow instructions given by the program
+
 • Watch output of your processes in the terminal labeled SHARED PROCESS FILE and the activity of the scheduler/ status in the SHARED LOG FILE
 
 
