@@ -7,8 +7,6 @@ import subprocess
 import time
 import os
 from threading import Thread
-import signal
-import heapq
 
 class JobScheduler:
     def __init__(self, command_queue, ipc_queue):
@@ -17,15 +15,19 @@ class JobScheduler:
         self.jobs = {}  # job_id: job
         self.running_processes = {}  # job_id: subprocess.Popen
         self.pending_jobs = PriorityQueue()  # Priority queue based on Job.__lt__
-        self.log_file = "shared_terminal.txt"
+        self.shared_process_file = "shared_terminal.txt"
+        self.shared_log_file = "log.txt"
         
-        if not os.path.exists(self.log_file):
-            with open(self.log_file, 'w') as f:
-                f.write("")        
+        with open(self.shared_process_file, 'w') as f:
+            f.write("SHARED PROCESS FILE\n")
+
+        with open(self.shared_log_file, 'w') as f:
+            f.write("SHARED LOG FILE\n")        
 
     def run(self):
         print("Scheduler started. Waiting for jobs...\n")
-        subprocess.Popen(['start', 'cmd', '/K', 'tail', '-f', self.log_file], shell=True)
+        #subprocess.Popen(['start', 'cmd', '/K', 'tail', '-f', self.shared_process_file], shell=True)
+        #subprocess.Popen(['start', 'cmd', '/K', 'tail', '-f', self.shared_log_file], shell=True)
 
         while True:
             self.check_command_queue()
@@ -33,12 +35,6 @@ class JobScheduler:
             if not self.pending_jobs.empty():
                 job = self.pending_jobs.get()
                 self.start_job(job)
-
-            # Exit if all jobs are done and no more are coming
-            all_done = all(job.status in ["Completed", "Failed", "Cancelled"] for job in self.jobs.values())
-            if self.pending_jobs.empty() and all_done and self.command_queue.empty():
-                print("✅ All jobs finished. Shutting down scheduler.")
-                break
 
             time.sleep(0.5)
 
@@ -52,7 +48,8 @@ class JobScheduler:
                     job.status = "Queued"
                     self.jobs[job.id] = job
                     self.pending_jobs.put(job)
-                    print(f"Job Queued: {job}")
+                    with open(self.shared_log_file, 'a') as f:
+                        print(f"Job Queued: {job}", file=f)
             except Empty:
                 break
 
@@ -60,10 +57,11 @@ class JobScheduler:
         try:
             msg = self.ipc_queue.get_nowait()
             if msg.action == "status":
-                print("\n--- Job Status ---")
-                for job in self.jobs.values():
-                    print(job)
-                print("------------------\n")
+                with open(self.shared_log_file, 'a') as f:
+                    print("\n--- Job Status ---", file=f)
+                    for job in self.jobs.values():
+                        print(job, file=f)
+                    print("------------------\n", file=f)
 
             elif msg.action == "cancel":
                 job_id = msg.data
@@ -79,6 +77,8 @@ class JobScheduler:
                         job.process.terminate()
                         job.status = "Cancelled"
                         print(f"Job {matched_job_id[:8]} cancelled successfully.")
+                    elif  self.jobs.get(job.id):
+                        del self.jobs[job.id]
                     else:
                         print(f"Job {matched_job_id[:8]} already completed or not running.")
                 else:
@@ -91,30 +91,35 @@ class JobScheduler:
 
     def start_job(self, job):
         job.status = "Running"
-        self.jobs[job.id] = job
-        print(f"Starting Job: {job}")
 
+        with open(self.shared_log_file, 'a') as f:
+            print(f"\nStarting Job: {job}\n", file=f)
 
-        def run_process_in_shared_terminal(command, log_file):
-            with open(log_file, "a") as log:
+        def run_process_in_shared_terminal(command):
+            with open(self.shared_process_file, "a") as log:
                 process = subprocess.Popen(command, stdout=log, stderr=log, shell=True)
-                process.communicate()
                 return process  
+            
+        if self.jobs.get(job.id):
+            try:
+                process = run_process_in_shared_terminal(job.command)
+                job.process = process
+                self.running_processes[job.id] = process
 
-        try:
-            process = run_process_in_shared_terminal(job.command, self.log_file)
-            job.process = process
-            self.running_processes[job.id] = process
+                # Run a background thread to wait and update status
+                def wait_and_update():
+                    process.wait()
+                    if job.status != "Cancelled":
+                        job.status = "Completed" if process.returncode == 0 else "Failed"
+                        with open(self.shared_log_file, 'a') as f:
+                            print(f"Finished: {job}\n", file=f)
 
-            # Run a background thread to wait and update status
-            def wait_and_update():
-                process.wait()
-                if job.status != "Cancelled":
-                    job.status = "Completed" if process.returncode == 0 else "Failed"
-                    print(f"Finished: {job}")
-              
-            Thread(target=wait_and_update, daemon=True).start()
+                Thread(target=wait_and_update, daemon=True).start()
 
-        except Exception as e:
-            job.status = "Failed"
-            print(f"Error running job {job.id[:8]}: {e}")
+            except Exception as e:
+                job.status = "Failed"
+                print(f"Error running job {job.id[:8]}: {e}")
+        else:
+            print(f"Job Cancelled: {job}\n")
+            with open(self.shared_log_file, 'a') as f:
+                print(f"Cancelled: {job}\n", file=f)

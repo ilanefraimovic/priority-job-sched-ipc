@@ -2,7 +2,7 @@ import uuid
 import time
 
 class Job:
-    def __init__(self, command, priority, estimated_time, resource_requirement):
+    def __init__(self, command, priority, estimated_time = 0, resource_requirement = 0):
         self.id = str(uuid.uuid4())
         self.command = command
         self.priority = priority
@@ -18,6 +18,8 @@ class Job:
             return self.priority < other.priority
         if self.estimated_time != other.estimated_time:
             return self.estimated_time < other.estimated_time
+        if self.resource_requirement != other.resource_requirement:
+            return self.resource_requirement < other.resource_requirement
         return self.timestamp < other.timestamp
 
     def __repr__(self):
