@@ -26,9 +26,7 @@ real-time.
 The program uses worker processes to execute the job commands and track their
 execution. Each job is executed in a separate process, which is managed by the scheduler.
 
-## To Run The Program:
-• Make sure you are using Windows OS -  this project is catered towards Windows
-
+## To Run The Program on Windows:
 • Download python3 onto your machine
 
 • Clone this repository onto your local filesystem
